@@ -1,4 +1,4 @@
-module github.com/korylprince/eml2html
+module github.com/risingsun001/eml2html1
 
 go 1.16
 
