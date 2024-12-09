@@ -1,4 +1,4 @@
-//package eml2html is a library used to transform RFC 822 (eml) files into html files viewable in a browser.
+// package eml2html is a library used to transform RFC 822 (eml) files into html files viewable in a browser.
 package eml2html
 
 import (
@@ -26,7 +26,7 @@ var tmpls embed.FS
 
 var emailTmpl = template.Must(template.ParseFS(tmpls, "templates/meta.tmpl", "templates/email.tmpl", "templates/base.tmpl"))
 
-//Meta is used to link pages to other pages
+// Meta is used to link pages to other pages
 type Meta struct {
 	Prev   string
 	Next   string
@@ -57,8 +57,8 @@ func writeMsgRoot(root, name string, r io.Reader) (*enmime.Envelope, error) {
 	return msg, nil
 }
 
-//WriteMsg parses and writes the given name/reader as an RFC 822 (eml) message and outputs an HTML representation at root.
-//meta is used to provide navigational links to neighbors or a parent
+// WriteMsg parses and writes the given name/reader as an RFC 822 (eml) message and outputs an HTML representation at root.
+// meta is used to provide navigational links to neighbors or a parent
 func WriteMsg(root, name string, msg *enmime.Envelope, meta *Meta) error {
 	root = filepath.Join(root, name)
 
@@ -75,18 +75,22 @@ type attachment struct {
 }
 
 func writeAttachments(root string, msg *enmime.Envelope) (attachments []*attachment, contentIDMap map[string]string, err error) {
+	if msg == nil {
+		return nil, nil, fmt.Errorf("received nil msg in writeAttachments")
+	}
+
 	root = filepath.Join(root, "attachments")
 
 	if err := os.MkdirAll(root, modeDir); err != nil {
-		return nil, nil, fmt.Errorf("Unable to create root attachments directory: %w", err)
+		return nil, nil, fmt.Errorf("unable to create root attachments directory: %w", err)
 	}
 
 	names := make(map[string]int)
 	contentIDMap = make(map[string]string)
 
-	for _, msg := range append(msg.Attachments, msg.Inlines...) {
-		//embedded message/rfc822
-		if msg.ContentType == ContentTypeMessageRFC822 || msg.FileName == "mime-attachment" || strings.HasPrefix(msg.FileName, ".eml") {
+	for _, msgPart := range append(msg.Attachments, msg.Inlines...) {
+		// embedded message/rfc822
+		if msgPart.ContentType == ContentTypeMessageRFC822 || msgPart.FileName == "mime-attachment" || strings.HasPrefix(msgPart.FileName, ".eml") {
 			fn := "attached.eml"
 			if i, ok := names[fn]; ok {
 				ext := filepath.Ext(fn)
@@ -95,7 +99,7 @@ func writeAttachments(root string, msg *enmime.Envelope) (attachments []*attachm
 			}
 			names[fn]++
 
-			m, err := writeMsgRoot(root, fn, bytes.NewReader(msg.Content))
+			m, err := writeMsgRoot(root, fn, bytes.NewReader(msgPart.Content))
 			if err != nil {
 				return nil, nil, fmt.Errorf("Unable to write embedded msg %s root: %w", fn, err)
 			}
@@ -107,7 +111,7 @@ func writeAttachments(root string, msg *enmime.Envelope) (attachments []*attachm
 			continue
 		}
 
-		fn := msg.FileName
+		fn := msgPart.FileName
 		if fn == "" {
 			continue
 		}
@@ -119,12 +123,12 @@ func writeAttachments(root string, msg *enmime.Envelope) (attachments []*attachm
 		}
 		names[fn]++
 
-		if err := os.WriteFile(filepath.Join(root, fn), msg.Content, modeFile); err != nil {
+		if err := os.WriteFile(filepath.Join(root, fn), msgPart.Content, modeFile); err != nil {
 			return nil, nil, fmt.Errorf("Unable to create write attachment %s: %w", fn, err)
 		}
 
-		if msg.ContentID != "" {
-			contentIDMap[strings.Trim(msg.ContentID, "<>")] = fn
+		if msgPart.ContentID != "" {
+			contentIDMap[strings.Trim(msgPart.ContentID, "<>")] = fn
 		}
 
 		attachments = append(attachments, &attachment{Name: fn, Link: fn})
