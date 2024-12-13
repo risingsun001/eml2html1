@@ -1,4 +1,4 @@
-package eml2html
+package eml2html1
 
 import (
 	"bytes"
