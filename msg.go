@@ -1,5 +1,5 @@
 // package eml2html is a library used to transform RFC 822 (eml) files into html files viewable in a browser.
-package eml2html
+package eml2html1
 
 
 import (
