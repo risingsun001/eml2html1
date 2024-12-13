@@ -1,6 +1,7 @@
 // package eml2html is a library used to transform RFC 822 (eml) files into html files viewable in a browser.
 package eml2html
 
+
 import (
 	"bytes"
 	"embed"
@@ -75,22 +76,18 @@ type attachment struct {
 }
 
 func writeAttachments(root string, msg *enmime.Envelope) (attachments []*attachment, contentIDMap map[string]string, err error) {
-	if msg == nil {
-		return nil, nil, fmt.Errorf("received nil msg in writeAttachments")
-	}
-
 	root = filepath.Join(root, "attachments")
 
 	if err := os.MkdirAll(root, modeDir); err != nil {
-		return nil, nil, fmt.Errorf("unable to create root attachments directory: %w", err)
+		return nil, nil, fmt.Errorf("Unable to create root attachments directory: %w", err)
 	}
 
 	names := make(map[string]int)
 	contentIDMap = make(map[string]string)
 
-	for _, msgPart := range append(msg.Attachments, msg.Inlines...) {
-		// embedded message/rfc822
-		if msgPart.ContentType == ContentTypeMessageRFC822 || msgPart.FileName == "mime-attachment" || strings.HasPrefix(msgPart.FileName, ".eml") {
+	for _, msg := range append(msg.Attachments, msg.Inlines...) {
+		//embedded message/rfc822
+		if msg.ContentType == ContentTypeMessageRFC822 || msg.FileName == "mime-attachment" || strings.HasPrefix(msg.FileName, ".eml") {
 			fn := "attached.eml"
 			if i, ok := names[fn]; ok {
 				ext := filepath.Ext(fn)
@@ -99,7 +96,7 @@ func writeAttachments(root string, msg *enmime.Envelope) (attachments []*attachm
 			}
 			names[fn]++
 
-			m, err := writeMsgRoot(root, fn, bytes.NewReader(msgPart.Content))
+			m, err := writeMsgRoot(root, fn, bytes.NewReader(msg.Content))
 			if err != nil {
 				return nil, nil, fmt.Errorf("Unable to write embedded msg %s root: %w", fn, err)
 			}
@@ -111,7 +108,7 @@ func writeAttachments(root string, msg *enmime.Envelope) (attachments []*attachm
 			continue
 		}
 
-		fn := msgPart.FileName
+		fn := msg.FileName
 		if fn == "" {
 			continue
 		}
@@ -123,12 +120,12 @@ func writeAttachments(root string, msg *enmime.Envelope) (attachments []*attachm
 		}
 		names[fn]++
 
-		if err := os.WriteFile(filepath.Join(root, fn), msgPart.Content, modeFile); err != nil {
+		if err := os.WriteFile(filepath.Join(root, fn), msg.Content, modeFile); err != nil {
 			return nil, nil, fmt.Errorf("Unable to create write attachment %s: %w", fn, err)
 		}
 
-		if msgPart.ContentID != "" {
-			contentIDMap[strings.Trim(msgPart.ContentID, "<>")] = fn
+		if msg.ContentID != "" {
+			contentIDMap[strings.Trim(msg.ContentID, "<>")] = fn
 		}
 
 		attachments = append(attachments, &attachment{Name: fn, Link: fn})
